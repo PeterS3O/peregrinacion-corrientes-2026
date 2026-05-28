@@ -468,6 +468,10 @@ function isVencida(fecha){
   return new Date() > limite;
 }
 function showPage(id){ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); $(id).classList.add('active'); window.scrollTo(0,0); }
+function setGoPayVisible(visible){
+  const btn = $('btn-go-pay');
+  if(btn) btn.style.display = visible ? 'block' : 'none';
+}
 function buildUrl(action, params){
   const url = new URL(API);
   url.searchParams.set('action', action);
@@ -504,6 +508,7 @@ async function buscarParticipante(){
     estadoData = data;
     renderState();
   }catch(e){
+    console.error(e);
     showPage('page-login');
     $('login-err').textContent = e.message === 'API_SIN_CONFIGURAR'
       ? 'Falta configurar la URL real de Apps Script en index.html.'
@@ -537,13 +542,13 @@ function renderState(){
   if(d.estadoCupo === 'lista_espera'){
     alert.style.display = 'block';
     alert.textContent = 'Estas en lista de espera. Por ahora no hace falta que cargues pagos.';
-    $('btn-go-pay').style.display = 'none';
+    setGoPayVisible(false);
   } else if(d.estadoCupo === 'baja'){
     alert.style.display = 'block';
     alert.textContent = 'Tu inscripcion figura dada de baja.';
-    $('btn-go-pay').style.display = 'none';
+    setGoPayVisible(false);
   } else {
-    $('btn-go-pay').style.display = 'block';
+    setGoPayVisible(true);
     const pendingCount = (d.pagos || []).filter(p => p.estado === 'pendiente').length;
     if(pendingCount){
       alert.style.display = 'block';
