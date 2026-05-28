@@ -46,6 +46,9 @@ button,input,select{font:inherit}
 .btn.warn{background:var(--amber)}
 .btn.danger{background:var(--red)}
 .btn.small{padding:7px 10px;font-size:.78rem}
+.btn.is-busy{position:relative;pointer-events:none;opacity:.82}
+.btn.is-busy::after{content:"";width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .75s linear infinite}
+.link-btn.is-busy,.tab.is-busy{opacity:.65;pointer-events:none}
 .full{width:100%}
 .link-btn{border:0;background:transparent;color:var(--blue);font-weight:700;cursor:pointer;padding:0}
 .staff-link{color:var(--muted);font-size:.78rem;font-weight:600;text-decoration:underline;text-underline-offset:3px}
@@ -126,6 +129,11 @@ tr:last-child td{border-bottom:0}
 .empty{color:var(--muted);text-align:center;padding:28px 12px}
 .loading{display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--muted);padding:34px}
 .spinner{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:spin .75s linear infinite}
+.global-loader{position:fixed;inset:0;display:none;align-items:flex-start;justify-content:center;padding-top:18px;background:rgba(246,248,246,.48);z-index:9999;pointer-events:none}
+.global-loader.active{display:flex}
+.global-loader-card{display:flex;align-items:center;gap:10px;background:white;border:1px solid var(--line);border-radius:999px;box-shadow:var(--shadow);padding:10px 14px;color:var(--ink);font-weight:800}
+.global-loader-card .mini-spinner{width:18px;height:18px;border:3px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:spin .75s linear infinite}
+.global-loader-card span{font-size:.86rem}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:760px){
   .grid3,.admin-grid{grid-template-columns:1fr 1fr}
@@ -138,6 +146,12 @@ tr:last-child td{border-bottom:0}
 </style>
 </head>
 <body>
+<div id="global-loader" class="global-loader" aria-live="polite" aria-hidden="true">
+  <div class="global-loader-card">
+    <div class="mini-spinner"></div>
+    <span id="global-loader-text">Procesando...</span>
+  </div>
+</div>
 <main id="page-home" class="page center active">
   <section class="home card">
     <h1 class="brand">Peregrinacion CNC Corrientes 2026</h1>
@@ -413,8 +427,27 @@ let paymentFilter = 'pendiente';
 let adminView = 'payments';
 let adminSearch = '';
 let paymentMode = 'transferencia';
+let busyCount = 0;
 
 function $(id){ return document.getElementById(id); }
+function showGlobalLoading(text){
+  busyCount++;
+  const el = $('global-loader');
+  const label = $('global-loader-text');
+  if(label) label.textContent = text || 'Procesando...';
+  if(el){ el.classList.add('active'); el.setAttribute('aria-hidden','false'); }
+}
+function hideGlobalLoading(){
+  busyCount = Math.max(0, busyCount - 1);
+  if(busyCount) return;
+  const el = $('global-loader');
+  if(el){ el.classList.remove('active'); el.setAttribute('aria-hidden','true'); }
+}
+function pulseButton(btn){
+  if(!btn || btn.disabled || btn.classList.contains('is-busy')) return;
+  btn.classList.add('is-busy');
+  setTimeout(() => btn.classList.remove('is-busy'), 900);
+}
 function money(n){ return '$' + Number(n || 0).toLocaleString('es-AR'); }
 function keys(str){ return (str || '').split(',').map(s=>s.trim()).filter(Boolean); }
 function cuotaLabel(str, sep){ return keys(str).map(k => MAP_PLAN[k] ? MAP_PLAN[k].label : k).join(sep || ' + '); }
@@ -438,8 +471,13 @@ async function api(action, params){
   if(API.includes('TU_ID_DE_SCRIPT')){
     throw new Error('API_SIN_CONFIGURAR');
   }
-  const res = await fetch(buildUrl(action, params));
-  return await res.json();
+  showGlobalLoading('Procesando...');
+  try{
+    const res = await fetch(buildUrl(action, params));
+    return await res.json();
+  }finally{
+    hideGlobalLoading();
+  }
 }
 function badge(text, kind){ return '<span class="pill '+(kind||'info')+'">'+text+'</span>'; }
 
@@ -667,14 +705,19 @@ async function subirACloudinary(file){
   if(CLD_CLOUD.includes('TU_') || CLD_PRESET.includes('TU_')){
     throw new Error('Falta configurar Cloudinary para guardar los comprobantes.');
   }
-  const form = new FormData();
-  form.append('file', file);
-  form.append('upload_preset', CLD_PRESET);
-  form.append('folder', 'peregrinacion-cnc/' + estadoData.dni);
-  const res = await fetch('https://api.cloudinary.com/v1_1/' + CLD_CLOUD + '/auto/upload', { method:'POST', body:form });
-  const data = await res.json();
-  if(!res.ok || !data.secure_url) throw new Error((data.error && data.error.message) || 'No se pudo subir el comprobante.');
-  return data.secure_url;
+  showGlobalLoading('Subiendo comprobante...');
+  try{
+    const form = new FormData();
+    form.append('file', file);
+    form.append('upload_preset', CLD_PRESET);
+    form.append('folder', 'peregrinacion-cnc/' + estadoData.dni);
+    const res = await fetch('https://api.cloudinary.com/v1_1/' + CLD_CLOUD + '/auto/upload', { method:'POST', body:form });
+    const data = await res.json();
+    if(!res.ok || !data.secure_url) throw new Error((data.error && data.error.message) || 'No se pudo subir el comprobante.');
+    return data.secure_url;
+  }finally{
+    hideGlobalLoading();
+  }
 }
 function showMsg(id, text, ok){ const el=$(id); el.textContent=text; el.className='message '+(ok?'ok':'bad'); }
 function showPaymentLoading(){
@@ -985,6 +1028,10 @@ function exportCSV(){
 document.addEventListener('DOMContentLoaded', () => {
   ['login-dni','login-email'].forEach(id => $(id).addEventListener('keydown', e => { if(e.key === 'Enter') buscarParticipante(); }));
   $('admin-pass').addEventListener('keydown', e => { if(e.key === 'Enter') loginAdmin(); });
+});
+document.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if(btn) pulseButton(btn);
 });
 </script>
 </body>
