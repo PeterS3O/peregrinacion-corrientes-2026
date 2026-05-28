@@ -149,7 +149,7 @@ tr:last-child td{border-bottom:0}
     <div class="how">
       <div><b>1. Inscripcion</b><span>Completa el formulario con tus datos reales, DNI y email de acceso.</span></div>
       <div><b>2. Portal</b><span>Ingresa con DNI y email para ver tus cuotas y vencimientos.</span></div>
-      <div><b>3. Comprobantes</b><span>Subi imagen o PDF de transferencia, o foto del recibo si pagaste en efectivo.</span></div>
+      <div><b>3. Pagos</b><span>Subi el comprobante de transferencia o la foto del recibo si pagaste en efectivo.</span></div>
     </div>
     <div style="text-align:center;margin-top:18px">
       <button class="link-btn staff-link" onclick="showPage('page-admin-login')">Acceso catequistas</button>
@@ -192,6 +192,8 @@ tr:last-child td{border-bottom:0}
     <div class="top">
       <h2 class="title">Mi estado</h2>
       <div class="toolbar">
+        <button class="btn secondary small" onclick="showProfile()">Mis datos</button>
+        <button class="btn secondary small" onclick="showErrorReport()">Reportar error</button>
         <button class="btn secondary small" onclick="showPage('page-login')">Salir</button>
       </div>
     </div>
@@ -207,7 +209,7 @@ tr:last-child td{border-bottom:0}
       <section class="card panel">
         <div style="font-weight:800">Alias Mercado Pago</div>
         <div style="font-size:1.1rem;color:var(--green);font-weight:800;letter-spacing:.03em" id="state-alias"></div>
-        <p class="sub" style="margin:6px 0 0">Para acreditar cada cuota, subi el comprobante de la transferencia o una foto del recibo si pagaste en efectivo.</p>
+        <p class="sub" style="margin:6px 0 0">Para acreditar cada cuota, subi el comprobante de transferencia o la foto del recibo si pagaste en efectivo. Los pagos en efectivo quedan pendientes hasta que el responsable entregue el dinero.</p>
       </section>
       <section id="state-alert" class="panel card" style="display:none;background:var(--amber-soft);color:var(--amber)"></section>
       <section class="grid3">
@@ -223,10 +225,6 @@ tr:last-child td{border-bottom:0}
         <div style="font-weight:800;margin-bottom:4px">Cuotas</div>
         <div id="state-fees"></div>
       </section>
-      <div class="home-actions" style="grid-template-columns:1fr 1fr">
-        <button id="btn-go-pay" class="btn full" onclick="showPayment()">Registrar comprobante</button>
-        <button class="btn secondary full" onclick="showProfile()">Mis datos</button>
-      </div>
     </div>
   </div>
 </main>
@@ -250,6 +248,21 @@ tr:last-child td{border-bottom:0}
   </div>
 </main>
 
+<main id="page-error-report" class="page">
+  <div class="wrap" style="max-width:620px">
+    <div class="top">
+      <h2 class="title">Reportar error</h2>
+      <button class="btn secondary small" onclick="refreshState()">Volver</button>
+    </div>
+    <section class="card panel">
+      <p class="sub">Contanos si ves datos incorrectos, un pago que no aparece o cualquier problema del portal.</p>
+      <div class="field"><label>Descripcion del problema</label><textarea id="error-message"></textarea></div>
+      <button class="btn full" onclick="submitErrorReport()">Enviar reporte</button>
+      <div id="error-msg" class="message"></div>
+    </section>
+  </div>
+</main>
+
 <main id="page-payment" class="page">
   <div class="wrap" style="max-width:560px">
     <div class="top">
@@ -263,28 +276,26 @@ tr:last-child td{border-bottom:0}
         <div id="transfer-detail"></div>
       </div>
       <div class="pay-note">
-        <b>Como registrar tu pago</b>
-        <div>Opcion 1: transferi por Mercado Pago y subi el comprobante donde se vea tu nombre, el destino y el numero de comprobante.</div>
-        <div style="margin-top:5px">Opcion 2: paga en efectivo a tu responsable y subi una foto del recibo donde se indique quien recibio el dinero.</div>
+        <b id="payment-note-title">Como registrar tu pago</b>
+        <div id="payment-note-main">Transferi por Mercado Pago y subi el comprobante donde se vea tu nombre, el destino y el numero de comprobante.</div>
+        <div id="payment-note-extra" style="margin-top:5px">El comprobante quedara en revision hasta que lo validen los catequistas.</div>
       </div>
       <div id="payment-form">
-        <div class="field">
+        <div class="field" style="display:none">
           <label>Medio de pago</label>
           <div class="choice">
             <label><input type="radio" name="medio-pago" value="Transferencia Mercado Pago" checked onchange="updatePaymentMode()"><div><b>Transferencia</b><span>Comprobante de Mercado Pago</span></div></label>
-            <label><input type="radio" name="medio-pago" value="Efectivo con recibo" onchange="updatePaymentMode()"><div><b>Efectivo</b><span>Foto del recibo del responsable</span></div></label>
+            <label><input type="radio" name="medio-pago" value="Efectivo" onchange="updatePaymentMode()"><div><b>Efectivo</b><span>Sin comprobante adjunto</span></div></label>
           </div>
         </div>
         <div id="cash-responsible-wrap" class="field" style="display:none">
           <label>Nombre y apellido del responsable</label>
           <input id="cash-responsible" placeholder="Ej: Maria Gonzalez" oninput="updateSubmitPaymentState()">
-          <p class="sub" style="margin:5px 0 0">El pago queda en verificacion hasta que el responsable entregue el dinero a los organizadores.</p>
+          <p class="sub" style="margin:5px 0 0">Subi la foto del recibo que te entregue tu responsable. El pago queda en verificacion y recien impactara cuando tu responsable entregue el dinero al catequista.</p>
         </div>
         <div id="payment-checks" class="checks"></div>
-        <label class="check"><input id="custom-amount-check" type="checkbox" onchange="toggleCustomAmount()"><span><b>Abone un monto distinto</b><br><span class="meta">Usar el importe real que figura en el comprobante.</span></span></label>
-        <div id="custom-amount-wrap" class="field" style="display:none"><label>Monto abonado</label><input id="custom-amount" inputmode="numeric" placeholder="Ej: 20000" oninput="updatePaymentTotal()"></div>
         <div id="payment-total" class="transfer" style="display:none;background:var(--blue-soft);color:var(--blue)"></div>
-        <div class="drop">
+        <div id="file-upload-wrap" class="drop">
           <input id="payment-file" type="file" accept="image/*,.pdf" onchange="onPaymentFile()">
           <b>Adjuntar comprobante</b>
           <div id="payment-file-name">Imagen o PDF, hasta 10 MB</div>
@@ -389,7 +400,7 @@ const MAP_PLAN = Object.fromEntries(PLAN_PAGOS.map(c=>[c.key,c]));
 const STATE_LABELS = {
   sin_pagos:'Sin pagos', en_revision:'En revision', al_dia:'Al dia',
   debe_vencidas:'Debe vencidas', pago_completo:'Pago completo',
-  comprobante_rechazado:'No validado', lista_espera:'Lista espera', baja:'Baja'
+  comprobante_rechazado:'No validado', lista_espera:'Lista espera', baja:'Dado de baja'
 };
 
 let estadoData = null;
@@ -401,11 +412,13 @@ let peopleData = null;
 let paymentFilter = 'pendiente';
 let adminView = 'payments';
 let adminSearch = '';
+let paymentMode = 'transferencia';
 
 function $(id){ return document.getElementById(id); }
 function money(n){ return '$' + Number(n || 0).toLocaleString('es-AR'); }
 function keys(str){ return (str || '').split(',').map(s=>s.trim()).filter(Boolean); }
 function cuotaLabel(str, sep){ return keys(str).map(k => MAP_PLAN[k] ? MAP_PLAN[k].label : k).join(sep || ' + '); }
+function hasVisibleComprobante(url){ return !!url && url !== '(adjunto pendiente)' && url !== '(efectivo sin comprobante)'; }
 function initials(name){ const p=(name||'').trim().split(/\s+/); return ((p[0]||'?')[0]+(p[1]||'?')[0]).toUpperCase(); }
 function isVencida(fecha){
   const [day, month, year] = (fecha || '').split('/').map(Number);
@@ -503,14 +516,16 @@ function renderState(){
     else if(activo && activo.estado === 'pendiente'){ state = 'En revision'; kind = 'pending'; }
     else if(rechazado){ state = 'No validado'; kind = 'bad'; }
     else if(isVencida(c.vencimiento)){ state = 'Vencido'; kind = 'bad'; }
-    const link = p && p.comprobanteUrl && p.comprobanteUrl !== '(adjunto pendiente)'
+    const link = p && hasVisibleComprobante(p.comprobanteUrl)
       ? '<a class="link-btn" href="'+p.comprobanteUrl+'" target="_blank">Ver comprobante</a>' : '';
     const idx = PLAN_PAGOS.findIndex(x => x.key === c.key);
     const cargadas = [...new Set([...(r.confirmadas || []), ...(r.pendientes || [])])];
     const previasOk = PLAN_PAGOS.slice(0, idx).every(prev => cargadas.includes(prev.key));
     const puedeCargar = d.estadoCupo !== 'lista_espera' && d.estadoCupo !== 'baja' && previasOk && (!activo || activo.estado === 'rechazado');
     const bloquear = !previasOk && (!activo || activo.estado === 'rechazado') ? '<span class="meta">Completa la cuota anterior primero.</span>' : '';
-    const cargar = puedeCargar ? '<button class="btn secondary small" onclick="showPayment(\''+c.key+'\')">Cargar comprobante</button>' : bloquear;
+    const cargar = puedeCargar
+      ? `<button class="btn small" onclick="showPayment('${c.key}','transferencia')">Cargar comprobante de transferencia</button><button class="btn secondary small" onclick="showPayment('${c.key}','efectivo')">Cargar pago en efectivo</button>`
+      : bloquear;
     return '<div class="row"><div><div class="name">'+c.label+'</div><div class="meta">Vence '+c.vencimiento+' - '+money(c.monto)+'</div>'+link+'</div><div class="actions">'+badge(state,kind)+cargar+'</div></div>';
   }).join('');
 
@@ -528,6 +543,28 @@ function showProfile(){
   $('profile-msg').className = 'message';
   $('profile-msg').textContent = '';
   showPage('page-profile');
+}
+
+function showErrorReport(){
+  if(!estadoData){ showPage('page-login'); return; }
+  $('error-message').value = '';
+  $('error-msg').className = 'message';
+  $('error-msg').textContent = '';
+  showPage('page-error-report');
+}
+
+async function submitErrorReport(){
+  if(!estadoData) return;
+  try{
+    const data = await api('reportarError', {
+      dni: estadoData.dni,
+      email: loginEmail,
+      mensaje: $('error-message').value
+    });
+    showMsg('error-msg', data.mensaje || data.error || 'Reporte enviado.', !!data.ok);
+  }catch(e){
+    showMsg('error-msg', e.message || 'No se pudo enviar el reporte.', false);
+  }
 }
 
 async function submitProfileChange(){
@@ -548,20 +585,21 @@ async function submitProfileChange(){
   }
 }
 
-function showPayment(preselectKey){
+function showPayment(preselectKey, mode){
+  paymentMode = mode === 'efectivo' ? 'efectivo' : 'transferencia';
   showPage('page-payment');
   $('transfer-alias').textContent = ALIAS;
   $('transfer-detail').innerHTML = 'CVU: ' + CVU + '<br>Titular: ' + TITULAR;
   $('payment-msg').className = 'message';
   $('payment-msg').textContent = '';
+  $('payment-form').style.display = 'block';
   $('payment-file').value = '';
   $('payment-file-name').textContent = 'Imagen o PDF, hasta 10 MB';
   $('cash-responsible').value = '';
-  $('custom-amount-check').checked = false;
-  $('custom-amount').value = '';
-  $('custom-amount-wrap').style.display = 'none';
   const transferRadio = document.querySelector('input[name="medio-pago"][value="Transferencia Mercado Pago"]');
-  if(transferRadio) transferRadio.checked = true;
+  const cashRadio = document.querySelector('input[name="medio-pago"][value="Efectivo"]');
+  if(transferRadio) transferRadio.checked = paymentMode === 'transferencia';
+  if(cashRadio) cashRadio.checked = paymentMode === 'efectivo';
   updatePaymentMode();
   const r = estadoData.resumen || {};
   const disponibles = PLAN_PAGOS.filter(c => !(r.confirmadas || []).includes(c.key) && !(r.pendientes || []).includes(c.key));
@@ -584,25 +622,30 @@ function showPayment(preselectKey){
 function toggleCheck(input){ input.closest('.check').classList.toggle('selected', input.checked); updateSubmitPaymentState(); }
 function selectedPaymentKeys(){ return Array.from(document.querySelectorAll('#payment-checks input:checked')).map(i=>i.value); }
 function updatePaymentTotal(){
-  const custom = $('custom-amount-check') && $('custom-amount-check').checked;
-  const manual = Number((($('custom-amount') && $('custom-amount').value) || '').replace(',', '.'));
-  const total = custom && manual > 0
-    ? manual
-    : selectedPaymentKeys().reduce((a,k)=>a+(MAP_PLAN[k] ? MAP_PLAN[k].monto : 0),0);
+  const total = selectedPaymentKeys().reduce((a,k)=>a+(MAP_PLAN[k] ? MAP_PLAN[k].monto : 0),0);
   $('payment-total').style.display = total ? 'block' : 'none';
-  $('payment-total').textContent = total ? (custom ? 'Monto declarado: ' : 'Total seleccionado: ') + money(total) : '';
+  $('payment-total').textContent = total ? 'Total seleccionado: ' + money(total) : '';
   updateSubmitPaymentState();
 }
 function updatePaymentMode(){
   const medio = (document.querySelector('input[name="medio-pago"]:checked') || {}).value || '';
   const cash = medio.toLowerCase().includes('efectivo');
+  paymentMode = cash ? 'efectivo' : 'transferencia';
   $('cash-responsible-wrap').style.display = cash ? 'block' : 'none';
+  $('file-upload-wrap').style.display = 'block';
+  $('btn-submit-payment').textContent = cash ? 'Registrar pago en efectivo' : 'Enviar comprobante';
+  if(cash){
+    $('payment-note-title').textContent = 'Pago en efectivo';
+    $('payment-note-main').textContent = 'Indica el nombre y apellido de tu responsable y subi una foto del recibo que te entregue.';
+    $('payment-note-extra').textContent = 'El pago queda en verificacion y recien impactara cuando tu responsable entregue el dinero al catequista.';
+    $('payment-file-name').textContent = 'Foto del recibo o PDF, hasta 10 MB';
+  }else{
+    $('payment-note-title').textContent = 'Comprobante de transferencia';
+    $('payment-note-main').textContent = 'Transferi por Mercado Pago y subi el comprobante donde se vea tu nombre, el destino y el numero de comprobante.';
+    $('payment-note-extra').textContent = 'El comprobante quedara en revision hasta que lo validen los catequistas.';
+    $('payment-file-name').textContent = 'Imagen o PDF, hasta 10 MB';
+  }
   updateSubmitPaymentState();
-}
-function toggleCustomAmount(){
-  const enabled = $('custom-amount-check').checked;
-  $('custom-amount-wrap').style.display = enabled ? 'block' : 'none';
-  updatePaymentTotal();
 }
 function onPaymentFile(){
   const f = $('payment-file').files[0];
@@ -615,10 +658,10 @@ function updateSubmitPaymentState(){
   const hasFee = selectedPaymentKeys().length > 0;
   const hasFile = !!($('payment-file') && $('payment-file').files && $('payment-file').files[0]);
   const medio = (document.querySelector('input[name="medio-pago"]:checked') || {}).value || '';
-  const cashOk = !medio.toLowerCase().includes('efectivo') || (($('cash-responsible').value || '').trim().length > 3);
-  const custom = $('custom-amount-check') && $('custom-amount-check').checked;
-  const amountOk = !custom || Number((($('custom-amount') && $('custom-amount').value) || '').replace(',', '.')) > 0;
-  btn.disabled = !(hasFee && hasFile && cashOk && amountOk);
+  const cash = medio.toLowerCase().includes('efectivo');
+  const cashOk = !cash || (($('cash-responsible').value || '').trim().length > 3);
+  const fileOk = hasFile;
+  btn.disabled = !(hasFee && fileOk && cashOk);
 }
 async function subirACloudinary(file){
   if(CLD_CLOUD.includes('TU_') || CLD_PRESET.includes('TU_')){
@@ -639,17 +682,24 @@ function showPaymentLoading(){
   el.className = 'message loading';
   el.innerHTML = '<div class="prayer-loader"><div class="prayer-icon">✚</div><div class="prayer-title">Estamos cargando tu comprobante</div><div class="prayer-text">Mientras esperas, reza un Ave Maria. Cuando termine la subida te avisamos aca mismo.</div><div class="beads"><span></span><span></span><span></span><span></span><span></span></div></div>';
 }
+function showPaymentLoading(){
+  const el = $('payment-msg');
+  el.className = 'message loading';
+  const title = paymentMode === 'efectivo' ? 'Estamos registrando tu pago en efectivo' : 'Estamos cargando tu comprobante';
+  const text = paymentMode === 'efectivo' ? 'Mientras esperas, reza un Ave Maria. Enseguida dejamos el pago en verificacion.' : 'Mientras esperas, reza un Ave Maria. Cuando termine la subida te avisamos aca mismo.';
+  el.innerHTML = '<div class="prayer-loader"><div class="prayer-icon">+</div><div class="prayer-title">'+title+'</div><div class="prayer-text">'+text+'</div><div class="beads"><span></span><span></span><span></span><span></span><span></span></div></div>';
+}
+
 async function registrarPago(){
   const cuotas = selectedPaymentKeys();
   const file = $('payment-file').files[0];
   const medioPago = (document.querySelector('input[name="medio-pago"]:checked') || {}).value || '';
   const responsableEfectivo = ($('cash-responsible').value || '').trim();
-  const montoManual = $('custom-amount-check').checked ? $('custom-amount').value.trim() : '';
+  const isCash = medioPago.toLowerCase().includes('efectivo');
   if(!cuotas.length){ showMsg('payment-msg','Selecciona al menos una cuota.',false); return; }
-  if(!file){ showMsg('payment-msg','Adjunta el comprobante de Mercado Pago o la foto del recibo.',false); return; }
-  if(medioPago.toLowerCase().includes('efectivo') && !responsableEfectivo){ showMsg('payment-msg','Indica nombre y apellido del responsable que recibio el efectivo.',false); return; }
-  if($('custom-amount-check').checked && !(Number(montoManual.replace(',', '.')) > 0)){ showMsg('payment-msg','Ingresa el monto abonado.',false); return; }
-  if(file.size > 10 * 1024 * 1024){ showMsg('payment-msg','El archivo supera 10 MB.',false); return; }
+  if(!file){ showMsg('payment-msg', isCash ? 'Adjunta la foto del recibo del pago en efectivo.' : 'Adjunta el comprobante de Mercado Pago.', false); return; }
+  if(isCash && !responsableEfectivo){ showMsg('payment-msg','Indica nombre y apellido del responsable que recibio el efectivo.',false); return; }
+  if(file && file.size > 10 * 1024 * 1024){ showMsg('payment-msg','El archivo supera 10 MB.',false); return; }
   $('payment-form').style.display='none';
   showPaymentLoading();
   try{
@@ -660,7 +710,6 @@ async function registrarPago(){
       cuotas: cuotas.join(','),
       medioPago,
       responsableEfectivo,
-      montoManual,
       comprobanteUrl,
       comprobanteNombre: file.name,
       comprobanteTipo: file.type || ''
@@ -713,8 +762,9 @@ async function refreshAdmin(){
 function groupedPayments(){
   const map = {};
   (adminData.pagos || []).forEach(p => {
-    if(!map[p.dni]) map[p.dni] = { dni:p.dni, nombre:p.nombre, whatsapp:p.whatsapp || '', pagos:[] };
+    if(!map[p.dni]) map[p.dni] = { dni:p.dni, nombre:p.nombre, whatsapp:p.whatsapp || '', estadoCupo:p.estadoCupo || '', pagos:[] };
     if(p.whatsapp && !map[p.dni].whatsapp) map[p.dni].whatsapp = p.whatsapp;
+    if(p.estadoCupo) map[p.dni].estadoCupo = p.estadoCupo;
     map[p.dni].pagos.push(p);
   });
   return Object.values(map);
@@ -726,10 +776,11 @@ function renderAdminStats(){
   const pending = (adminData.pagos || []).filter(p=>p.estado==='pendiente').length;
   const recaudado = people.reduce((a,p)=>a+confirmedTotal(p),0);
   $('admin-stats').innerHTML =
-    metric(adminData.totalInscriptos || 0, 'Inscriptos', 'var(--blue)') +
+    metric(adminData.totalActivos ?? adminData.totalInscriptos ?? 0, 'Inscriptos activos', 'var(--blue)') +
     metric(pending, 'Por revisar', 'var(--amber)') +
     metric(money(recaudado), 'Recaudado', 'var(--green)') +
-    metric((adminData.pagos || []).length, 'Comprobantes', 'var(--muted)');
+    metric(adminData.totalBajas || 0, 'Dados de baja', 'var(--red)') +
+    metric(money(adminData.dineroADevolver || 0), 'Dinero a devolver', 'var(--red)');
 }
 function metric(n,label,color){ return '<div class="metric card"><b style="color:'+color+'">'+n+'</b><span>'+label+'</span></div>'; }
 function setAdminView(view){
@@ -775,11 +826,12 @@ function renderPaymentCard(person){
     return '<span class="chip '+kind+'">'+c.label+'</span>';
   }).join('');
   const details = person.pagos.map(p=>renderComp(p, person)).join('');
-  return '<article class="pay-card card '+cls+'"><div class="pay-head" onclick="toggleDetails(\'det-'+person.dni+'\')"><div class="avatar">'+initials(person.nombre)+'</div><div class="grow"><b>'+person.nombre+'</b><span>DNI '+person.dni+' - '+person.pagos.length+' comprobante(s)</span></div><div><b>'+money(confirmedTotal(person))+'</b><span>de '+money(TOTAL)+'</span></div></div><div class="chips">'+chips+'</div><div id="det-'+person.dni+'" class="details">'+details+'</div><div class="row" style="padding:10px 14px"><span class="meta">'+(person.whatsapp ? 'WA '+person.whatsapp : 'Sin WhatsApp')+'</span><div class="actions">'+(canEdit()?'<button class="btn secondary small" onclick="markLow(\''+person.dni+'\')">Dar de baja</button>':'')+'</div></div></article>';
+  const bajaInfo = person.estadoCupo === 'baja' ? '<span class="pill bad">Dado de baja - devolver '+money(confirmedTotal(person))+'</span>' : '';
+  return '<article class="pay-card card '+cls+'"><div class="pay-head" onclick="toggleDetails(\'det-'+person.dni+'\')"><div class="avatar">'+initials(person.nombre)+'</div><div class="grow"><b>'+person.nombre+'</b><span>DNI '+person.dni+' - '+person.pagos.length+' comprobante(s)</span>'+bajaInfo+'</div><div><b>'+money(confirmedTotal(person))+'</b><span>de '+money(TOTAL)+'</span></div></div><div class="chips">'+chips+'</div><div id="det-'+person.dni+'" class="details">'+details+'</div><div class="row" style="padding:10px 14px"><span class="meta">'+(person.whatsapp ? 'WA '+person.whatsapp : 'Sin WhatsApp')+'</span><div class="actions">'+(canEdit() && person.estadoCupo !== 'baja'?'<button class="btn secondary small" onclick="markLow(\''+person.dni+'\')">Dar de baja</button>':'')+'</div></div></article>';
 }
 function renderComp(p, person){
   let actions = '';
-  const file = p.comprobanteUrl && p.comprobanteUrl !== '(adjunto pendiente)' ? '<a class="btn secondary small" href="'+p.comprobanteUrl+'" target="_blank">Ver</a>' : '<span class="meta">Sin archivo</span>';
+  const file = hasVisibleComprobante(p.comprobanteUrl) ? '<a class="btn secondary small" href="'+p.comprobanteUrl+'" target="_blank">Ver</a>' : '<span class="meta">Sin archivo</span>';
   if(p.estado === 'pendiente'){
     actions = canEdit() ? '<button class="btn small" onclick="setPaymentStatus(\''+p.id+'\',\'confirmado\')">Confirmar</button><button class="btn danger small" onclick="setPaymentStatus(\''+p.id+'\',\'rechazado\')">No validar</button>' : badge('En revision','pending');
   } else if(p.estado === 'confirmado'){
