@@ -23,8 +23,15 @@ button,input,select{font:inherit}
 .center{align-items:center;justify-content:center;padding:28px 16px}
 .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
 .login{width:100%;max-width:430px;padding:28px}
+.home{width:100%;max-width:760px;padding:28px}
 .brand{font-family:"DM Serif Display",serif;font-size:2rem;line-height:1.05;margin:0 0 8px}
 .sub{color:var(--muted);font-size:.92rem;margin:0 0 22px}
+.home-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+.how{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.how div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px}
+.how b{display:block;margin-bottom:4px}
+.how span{color:var(--muted);font-size:.82rem}
+.form-frame{width:100%;height:78vh;border:0;background:white;border-radius:var(--radius)}
 .field{margin:0 0 13px}
 .field label{display:block;color:var(--muted);font-size:.78rem;font-weight:700;margin-bottom:5px}
 .field input,.field select{width:100%;border:1.5px solid var(--line);border-radius:8px;background:white;color:var(--ink);padding:11px 12px;outline:none}
@@ -40,6 +47,8 @@ button,input,select{font:inherit}
 .btn.small{padding:7px 10px;font-size:.78rem}
 .full{width:100%}
 .link-btn{border:0;background:transparent;color:var(--blue);font-weight:700;cursor:pointer;padding:0}
+.staff-link{color:var(--muted);font-size:.78rem;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.staff-link:hover{color:var(--blue)}
 .err{min-height:20px;color:var(--red);font-size:.82rem;text-align:center;margin-top:10px}
 .wrap{max-width:1080px;margin:0 auto;padding:18px 14px 36px}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
@@ -120,6 +129,7 @@ tr:last-child td{border-bottom:0}
 @media(max-width:760px){
   .grid3,.admin-grid{grid-template-columns:1fr 1fr}
   .choice{grid-template-columns:1fr}
+  .home-actions,.how{grid-template-columns:1fr}
   .row,.comp{flex-direction:column}
   .actions{justify-content:flex-start}
   .login{padding:22px}
@@ -127,7 +137,41 @@ tr:last-child td{border-bottom:0}
 </style>
 </head>
 <body>
-<main id="page-login" class="page center active">
+<main id="page-home" class="page center active">
+  <section class="home card">
+    <h1 class="brand">Peregrinacion CNC Corrientes 2026</h1>
+    <p class="sub">Inscripcion y gestion de pagos en un solo lugar. Si todavia no completaste el formulario, empeza por la inscripcion. Si ya estas inscripto, entra al portal con tu DNI y email.</p>
+    <div class="home-actions">
+      <button class="btn full" onclick="showPage('page-form')">Inscribirme</button>
+      <button class="btn secondary full" onclick="showPage('page-login')">Entrar al portal de pagos</button>
+    </div>
+    <div class="how">
+      <div><b>1. Inscripcion</b><span>Completa el formulario con tus datos reales, DNI y email de acceso.</span></div>
+      <div><b>2. Portal</b><span>Ingresa con DNI y email para ver tus cuotas y vencimientos.</span></div>
+      <div><b>3. Comprobantes</b><span>Subi imagen o PDF de transferencia, o foto del recibo si pagaste en efectivo.</span></div>
+    </div>
+    <div style="text-align:center;margin-top:18px">
+      <button class="link-btn staff-link" onclick="showPage('page-admin-login')">Acceso catequistas</button>
+    </div>
+  </section>
+</main>
+
+<main id="page-form" class="page">
+  <div class="wrap">
+    <div class="top">
+      <h2 class="title">Inscripcion</h2>
+      <div class="toolbar">
+        <button class="btn secondary small" onclick="showPage('page-home')">Volver</button>
+        <button class="btn small" onclick="showPage('page-login')">Ya estoy inscripto</button>
+      </div>
+    </div>
+    <section class="card panel">
+      <iframe class="form-frame" src="https://docs.google.com/forms/d/e/1FAIpQLSctYu1qNNiZ1QbrdMh2Azgnwy__bNQK56-TL-A6xrv9tlpUgA/viewform?embedded=true">Cargando...</iframe>
+    </section>
+  </div>
+</main>
+
+<main id="page-login" class="page center">
   <section class="login card">
     <h1 class="brand">Peregrinacion CNC Corrientes</h1>
     <p class="sub">Consulta tu estado de cuotas y carga comprobantes con tu DNI y el email usado en la inscripcion.</p>
@@ -136,7 +180,9 @@ tr:last-child td{border-bottom:0}
     <button class="btn full" onclick="buscarParticipante()">Ingresar</button>
     <div id="login-err" class="err"></div>
     <div style="text-align:center;margin-top:18px">
-      <button class="link-btn" onclick="showPage('page-admin-login')">Panel organizador</button>
+      <button class="link-btn" onclick="showPage('page-home')">Volver al inicio</button>
+      <span style="color:var(--line);margin:0 8px">|</span>
+      <button class="link-btn staff-link" onclick="showPage('page-admin-login')">Acceso catequistas</button>
     </div>
   </section>
 </main>
@@ -223,8 +269,8 @@ tr:last-child td{border-bottom:0}
 
 <main id="page-admin-login" class="page center">
   <section class="login card">
-    <h1 class="brand">Panel organizador</h1>
-    <p class="sub">Gestion de comprobantes, cupos e inscriptos.</p>
+    <h1 class="brand">Acceso catequistas</h1>
+    <p class="sub">Espacio reservado para responsables de la peregrinacion.</p>
     <div class="field"><label>Clave</label><input id="admin-pass" type="password"></div>
     <button class="btn full" onclick="loginAdmin()">Ingresar</button>
     <div id="admin-login-err" class="err"></div>
