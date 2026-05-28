@@ -35,6 +35,7 @@ button,input,select{font:inherit}
 .field{margin:0 0 13px}
 .field label{display:block;color:var(--muted);font-size:.78rem;font-weight:700;margin-bottom:5px}
 .field input,.field select{width:100%;border:1.5px solid var(--line);border-radius:8px;background:white;color:var(--ink);padding:11px 12px;outline:none}
+.field textarea{width:100%;border:1.5px solid var(--line);border-radius:8px;background:white;color:var(--ink);padding:11px 12px;outline:none;min-height:72px;resize:vertical}
 .field input:focus,.field select:focus{border-color:var(--green)}
 .btn{border:0;border-radius:8px;background:var(--green);color:white;font-weight:700;padding:11px 14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px}
 .btn:hover{background:var(--green-2)}
@@ -162,7 +163,6 @@ tr:last-child td{border-bottom:0}
       <h2 class="title">Inscripcion</h2>
       <div class="toolbar">
         <button class="btn secondary small" onclick="showPage('page-home')">Volver</button>
-        <button class="btn small" onclick="showPage('page-login')">Ya estoy inscripto</button>
       </div>
     </div>
     <section class="card panel">
@@ -223,8 +223,30 @@ tr:last-child td{border-bottom:0}
         <div style="font-weight:800;margin-bottom:4px">Cuotas</div>
         <div id="state-fees"></div>
       </section>
-      <button id="btn-go-pay" class="btn full" onclick="showPayment()">Registrar comprobante</button>
+      <div class="home-actions" style="grid-template-columns:1fr 1fr">
+        <button id="btn-go-pay" class="btn full" onclick="showPayment()">Registrar comprobante</button>
+        <button class="btn secondary full" onclick="showProfile()">Mis datos</button>
+      </div>
     </div>
+  </div>
+</main>
+
+<main id="page-profile" class="page">
+  <div class="wrap" style="max-width:620px">
+    <div class="top">
+      <h2 class="title">Mis datos</h2>
+      <button class="btn secondary small" onclick="refreshState()">Volver</button>
+    </div>
+    <section class="card panel">
+      <p class="sub">Podes proponer cambios de contacto. Un catequista debe aprobarlos antes de que impacten en tu inscripcion.</p>
+      <div class="field"><label>Celular</label><input id="profile-celular"></div>
+      <div class="field"><label>Telefono de emergencia</label><input id="profile-emergencia"></div>
+      <div class="field"><label>Parroquia</label><input id="profile-parroquia"></div>
+      <div class="field"><label>Comunidad</label><input id="profile-comunidad"></div>
+      <div class="field"><label>Restricciones alimentarias</label><textarea id="profile-restricciones"></textarea></div>
+      <button class="btn full" onclick="submitProfileChange()">Enviar cambios para aprobacion</button>
+      <div id="profile-msg" class="message"></div>
+    </section>
   </div>
 </main>
 
@@ -249,11 +271,18 @@ tr:last-child td{border-bottom:0}
         <div class="field">
           <label>Medio de pago</label>
           <div class="choice">
-            <label><input type="radio" name="medio-pago" value="Transferencia Mercado Pago" checked><div><b>Transferencia</b><span>Comprobante de Mercado Pago</span></div></label>
-            <label><input type="radio" name="medio-pago" value="Efectivo con recibo"><div><b>Efectivo</b><span>Foto del recibo del responsable</span></div></label>
+            <label><input type="radio" name="medio-pago" value="Transferencia Mercado Pago" checked onchange="updatePaymentMode()"><div><b>Transferencia</b><span>Comprobante de Mercado Pago</span></div></label>
+            <label><input type="radio" name="medio-pago" value="Efectivo con recibo" onchange="updatePaymentMode()"><div><b>Efectivo</b><span>Foto del recibo del responsable</span></div></label>
           </div>
         </div>
+        <div id="cash-responsible-wrap" class="field" style="display:none">
+          <label>Nombre y apellido del responsable</label>
+          <input id="cash-responsible" placeholder="Ej: Maria Gonzalez" oninput="updateSubmitPaymentState()">
+          <p class="sub" style="margin:5px 0 0">El pago queda en verificacion hasta que el responsable entregue el dinero a los organizadores.</p>
+        </div>
         <div id="payment-checks" class="checks"></div>
+        <label class="check"><input id="custom-amount-check" type="checkbox" onchange="toggleCustomAmount()"><span><b>Abone un monto distinto</b><br><span class="meta">Usar el importe real que figura en el comprobante.</span></span></label>
+        <div id="custom-amount-wrap" class="field" style="display:none"><label>Monto abonado</label><input id="custom-amount" inputmode="numeric" placeholder="Ej: 20000" oninput="updatePaymentTotal()"></div>
         <div id="payment-total" class="transfer" style="display:none;background:var(--blue-soft);color:var(--blue)"></div>
         <div class="drop">
           <input id="payment-file" type="file" accept="image/*,.pdf" onchange="onPaymentFile()">
@@ -297,6 +326,7 @@ tr:last-child td{border-bottom:0}
     <div class="tabs">
       <button id="tab-payments" class="tab active" onclick="setAdminView('payments')">Pagos</button>
       <button id="tab-people" class="tab" onclick="setAdminView('people')">Inscriptos</button>
+      <button id="tab-profile" class="tab" onclick="setAdminView('profile')">Cambios de datos</button>
     </div>
     <section id="admin-payments">
       <div class="tabs">
@@ -323,9 +353,17 @@ tr:last-child td{border-bottom:0}
         </select>
         <select id="people-parish" onchange="renderPeople()"><option value="">Todas las parroquias</option></select>
         <select id="people-community" onchange="renderPeople()"><option value="">Todas las comunidades</option></select>
+        <select id="people-dni-order" onchange="renderPeople()">
+          <option value="">Orden original</option>
+          <option value="dni_vence_asc">DNI vence primero</option>
+          <option value="dni_vence_desc">DNI vence ultimo</option>
+        </select>
         <input id="people-search" placeholder="Buscar..." oninput="renderPeople()">
       </div>
-      <div class="table-wrap"><table><thead><tr><th>#</th><th>Nombre</th><th>DNI</th><th>Parroquia</th><th>Comunidad</th><th>Cupo</th><th>Estado</th><th>Confirmado</th><th>Acciones</th></tr></thead><tbody id="people-body"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Nombre</th><th>DNI</th><th>Vto. DNI</th><th>Parroquia</th><th>Comunidad</th><th>Cupo</th><th>Estado</th><th>Confirmado</th><th>Acciones</th></tr></thead><tbody id="people-body"></tbody></table></div>
+    </section>
+    <section id="admin-profile" style="display:none">
+      <div id="profile-requests"></div>
     </section>
   </div>
 </main>
@@ -467,13 +505,47 @@ function renderState(){
     else if(isVencida(c.vencimiento)){ state = 'Vencido'; kind = 'bad'; }
     const link = p && p.comprobanteUrl && p.comprobanteUrl !== '(adjunto pendiente)'
       ? '<a class="link-btn" href="'+p.comprobanteUrl+'" target="_blank">Ver comprobante</a>' : '';
-    const puedeCargar = d.estadoCupo !== 'lista_espera' && d.estadoCupo !== 'baja' && (!activo || activo.estado === 'rechazado');
-    const cargar = puedeCargar ? '<button class="btn secondary small" onclick="showPayment(\''+c.key+'\')">Cargar comprobante</button>' : '';
+    const idx = PLAN_PAGOS.findIndex(x => x.key === c.key);
+    const cargadas = [...new Set([...(r.confirmadas || []), ...(r.pendientes || [])])];
+    const previasOk = PLAN_PAGOS.slice(0, idx).every(prev => cargadas.includes(prev.key));
+    const puedeCargar = d.estadoCupo !== 'lista_espera' && d.estadoCupo !== 'baja' && previasOk && (!activo || activo.estado === 'rechazado');
+    const bloquear = !previasOk && (!activo || activo.estado === 'rechazado') ? '<span class="meta">Completa la cuota anterior primero.</span>' : '';
+    const cargar = puedeCargar ? '<button class="btn secondary small" onclick="showPayment(\''+c.key+'\')">Cargar comprobante</button>' : bloquear;
     return '<div class="row"><div><div class="name">'+c.label+'</div><div class="meta">Vence '+c.vencimiento+' - '+money(c.monto)+'</div>'+link+'</div><div class="actions">'+badge(state,kind)+cargar+'</div></div>';
   }).join('');
 
   $('state-loading').style.display='none';
   $('state-content').style.display='block';
+}
+
+function showProfile(){
+  if(!estadoData){ showPage('page-login'); return; }
+  $('profile-celular').value = estadoData.celular || '';
+  $('profile-emergencia').value = estadoData.emergencia || '';
+  $('profile-parroquia').value = estadoData.parroquia || '';
+  $('profile-comunidad').value = estadoData.comunidad || '';
+  $('profile-restricciones').value = estadoData.restricciones || '';
+  $('profile-msg').className = 'message';
+  $('profile-msg').textContent = '';
+  showPage('page-profile');
+}
+
+async function submitProfileChange(){
+  if(!estadoData) return;
+  try{
+    const data = await api('solicitarCambioPerfil', {
+      dni: estadoData.dni,
+      email: loginEmail,
+      celular: $('profile-celular').value,
+      emergencia: $('profile-emergencia').value,
+      parroquia: $('profile-parroquia').value,
+      comunidad: $('profile-comunidad').value,
+      restricciones: $('profile-restricciones').value
+    });
+    showMsg('profile-msg', data.mensaje || data.error || 'Solicitud enviada.', !!data.ok);
+  }catch(e){
+    showMsg('profile-msg', e.message || 'No se pudo enviar la solicitud.', false);
+  }
 }
 
 function showPayment(preselectKey){
@@ -484,16 +556,27 @@ function showPayment(preselectKey){
   $('payment-msg').textContent = '';
   $('payment-file').value = '';
   $('payment-file-name').textContent = 'Imagen o PDF, hasta 10 MB';
+  $('cash-responsible').value = '';
+  $('custom-amount-check').checked = false;
+  $('custom-amount').value = '';
+  $('custom-amount-wrap').style.display = 'none';
   const transferRadio = document.querySelector('input[name="medio-pago"][value="Transferencia Mercado Pago"]');
   if(transferRadio) transferRadio.checked = true;
+  updatePaymentMode();
   const r = estadoData.resumen || {};
   const disponibles = PLAN_PAGOS.filter(c => !(r.confirmadas || []).includes(c.key) && !(r.pendientes || []).includes(c.key));
   if(!disponibles.length){
     $('payment-form').innerHTML = '<div class="empty">Todas las cuotas ya tienen comprobante registrado.</div>';
     return;
   }
-  $('payment-checks').innerHTML = disponibles.map(c =>
-    '<label class="check '+(preselectKey === c.key ? 'selected' : '')+'"><input type="checkbox" value="'+c.key+'" '+(preselectKey === c.key ? 'checked' : '')+' onchange="toggleCheck(this);updatePaymentTotal()"><span><b>'+c.label+'</b><br><span class="meta">'+money(c.monto)+' - vence '+c.vencimiento+'</span></span></label>'
+  const cargadas = [...new Set([...(r.confirmadas || []), ...(r.pendientes || [])])];
+  $('payment-checks').innerHTML = disponibles.map(c => {
+    const idx = PLAN_PAGOS.findIndex(x => x.key === c.key);
+    const faltanPrevias = PLAN_PAGOS.slice(0, idx).filter(prev => !cargadas.includes(prev.key) && prev.key !== c.key);
+    const disabled = faltanPrevias.length ? 'disabled' : '';
+    const hint = faltanPrevias.length ? '<br><span class="meta">Primero carga: '+faltanPrevias.map(x=>x.label).join(', ')+'</span>' : '';
+    return '<label class="check '+(preselectKey === c.key && !disabled ? 'selected' : '')+'"><input type="checkbox" value="'+c.key+'" '+(preselectKey === c.key && !disabled ? 'checked' : '')+' '+disabled+' onchange="toggleCheck(this);updatePaymentTotal()"><span><b>'+c.label+'</b><br><span class="meta">'+money(c.monto)+' - vence '+c.vencimiento+'</span>'+hint+'</span></label>';
+  }
   ).join('');
   updatePaymentTotal();
 }
@@ -501,10 +584,25 @@ function showPayment(preselectKey){
 function toggleCheck(input){ input.closest('.check').classList.toggle('selected', input.checked); updateSubmitPaymentState(); }
 function selectedPaymentKeys(){ return Array.from(document.querySelectorAll('#payment-checks input:checked')).map(i=>i.value); }
 function updatePaymentTotal(){
-  const total = selectedPaymentKeys().reduce((a,k)=>a+(MAP_PLAN[k] ? MAP_PLAN[k].monto : 0),0);
+  const custom = $('custom-amount-check') && $('custom-amount-check').checked;
+  const manual = Number((($('custom-amount') && $('custom-amount').value) || '').replace(',', '.'));
+  const total = custom && manual > 0
+    ? manual
+    : selectedPaymentKeys().reduce((a,k)=>a+(MAP_PLAN[k] ? MAP_PLAN[k].monto : 0),0);
   $('payment-total').style.display = total ? 'block' : 'none';
-  $('payment-total').textContent = total ? 'Total seleccionado: ' + money(total) : '';
+  $('payment-total').textContent = total ? (custom ? 'Monto declarado: ' : 'Total seleccionado: ') + money(total) : '';
   updateSubmitPaymentState();
+}
+function updatePaymentMode(){
+  const medio = (document.querySelector('input[name="medio-pago"]:checked') || {}).value || '';
+  const cash = medio.toLowerCase().includes('efectivo');
+  $('cash-responsible-wrap').style.display = cash ? 'block' : 'none';
+  updateSubmitPaymentState();
+}
+function toggleCustomAmount(){
+  const enabled = $('custom-amount-check').checked;
+  $('custom-amount-wrap').style.display = enabled ? 'block' : 'none';
+  updatePaymentTotal();
 }
 function onPaymentFile(){
   const f = $('payment-file').files[0];
@@ -516,7 +614,11 @@ function updateSubmitPaymentState(){
   if(!btn) return;
   const hasFee = selectedPaymentKeys().length > 0;
   const hasFile = !!($('payment-file') && $('payment-file').files && $('payment-file').files[0]);
-  btn.disabled = !(hasFee && hasFile);
+  const medio = (document.querySelector('input[name="medio-pago"]:checked') || {}).value || '';
+  const cashOk = !medio.toLowerCase().includes('efectivo') || (($('cash-responsible').value || '').trim().length > 3);
+  const custom = $('custom-amount-check') && $('custom-amount-check').checked;
+  const amountOk = !custom || Number((($('custom-amount') && $('custom-amount').value) || '').replace(',', '.')) > 0;
+  btn.disabled = !(hasFee && hasFile && cashOk && amountOk);
 }
 async function subirACloudinary(file){
   if(CLD_CLOUD.includes('TU_') || CLD_PRESET.includes('TU_')){
@@ -541,8 +643,12 @@ async function registrarPago(){
   const cuotas = selectedPaymentKeys();
   const file = $('payment-file').files[0];
   const medioPago = (document.querySelector('input[name="medio-pago"]:checked') || {}).value || '';
+  const responsableEfectivo = ($('cash-responsible').value || '').trim();
+  const montoManual = $('custom-amount-check').checked ? $('custom-amount').value.trim() : '';
   if(!cuotas.length){ showMsg('payment-msg','Selecciona al menos una cuota.',false); return; }
   if(!file){ showMsg('payment-msg','Adjunta el comprobante de Mercado Pago o la foto del recibo.',false); return; }
+  if(medioPago.toLowerCase().includes('efectivo') && !responsableEfectivo){ showMsg('payment-msg','Indica nombre y apellido del responsable que recibio el efectivo.',false); return; }
+  if($('custom-amount-check').checked && !(Number(montoManual.replace(',', '.')) > 0)){ showMsg('payment-msg','Ingresa el monto abonado.',false); return; }
   if(file.size > 10 * 1024 * 1024){ showMsg('payment-msg','El archivo supera 10 MB.',false); return; }
   $('payment-form').style.display='none';
   showPaymentLoading();
@@ -553,6 +659,8 @@ async function registrarPago(){
       email: loginEmail,
       cuotas: cuotas.join(','),
       medioPago,
+      responsableEfectivo,
+      montoManual,
       comprobanteUrl,
       comprobanteNombre: file.name,
       comprobanteTipo: file.type || ''
@@ -612,7 +720,7 @@ function groupedPayments(){
   return Object.values(map);
 }
 function paymentKeys(pagos){ return [...new Set(pagos.flatMap(p=>keys(p.cuotas)))]; }
-function confirmedTotal(person){ return paymentKeys(person.pagos.filter(p=>p.estado==='confirmado')).reduce((a,k)=>a+(MAP_PLAN[k]?.monto || 0),0); }
+function confirmedTotal(person){ return person.pagos.filter(p=>p.estado==='confirmado').reduce((a,p)=>a+Number(p.monto || 0),0); }
 function renderAdminStats(){
   const people = groupedPayments();
   const pending = (adminData.pagos || []).filter(p=>p.estado==='pendiente').length;
@@ -628,9 +736,12 @@ function setAdminView(view){
   adminView = view;
   $('tab-payments').classList.toggle('active', view === 'payments');
   $('tab-people').classList.toggle('active', view === 'people');
+  $('tab-profile').classList.toggle('active', view === 'profile');
   $('admin-payments').style.display = view === 'payments' ? 'block' : 'none';
   $('admin-people').style.display = view === 'people' ? 'block' : 'none';
+  $('admin-profile').style.display = view === 'profile' ? 'block' : 'none';
   if(view === 'people') loadPeople();
+  if(view === 'profile') renderProfileRequests();
 }
 function setPaymentFilter(f){
   paymentFilter = f;
@@ -676,7 +787,7 @@ function renderComp(p, person){
   } else if(p.estado === 'rechazado'){
     actions = badge('No validado','bad') + (canEdit()?'<button class="btn secondary small" onclick="setPaymentStatus(\''+p.id+'\',\'pendiente\')">Revisar</button>':'') + whatsappButton('rechazo', p, person, 'Avisar');
   }
-  return '<div class="comp"><div><b>'+cuotaLabel(p.cuotas)+'</b><div class="meta">'+(p.fecha || '')+' - '+money(p.monto)+(p.medioPago ? ' - '+p.medioPago : '')+'</div></div><div class="actions">'+file+actions+'</div></div>';
+  return '<div class="comp"><div><b>'+cuotaLabel(p.cuotas)+'</b><div class="meta">'+(p.fecha || '')+' - '+money(p.monto)+(p.medioPago ? ' - '+p.medioPago : '')+(p.responsableEfectivo ? ' - Resp: '+p.responsableEfectivo : '')+'</div></div><div class="actions">'+file+actions+'</div></div>';
 }
 function toggleDetails(id){ const el=$(id); if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; }
 async function setPaymentStatus(id, status){
@@ -701,10 +812,22 @@ function whatsappButton(tipo, p, person, label){
 async function markPaymentWA(id,tipo){ try{ await api('marcarAvisoWAPago', { pagoId:id, tipo, adminToken }); }catch(e){} }
 async function markLow(dni){
   if(!canEdit()) return;
+  if(!confirm('Vas a dar de baja a esta persona. Sus pagos quedan en historial, pero no podra cargar nuevos comprobantes. ¿Continuar?')) return;
   const nota = prompt('Nota opcional para la baja:') || '';
-  const data = await api('marcarBaja', { dni, nota, reemplazo:'', adminToken });
-  if(!data.ok){ alert(data.error || 'No se pudo dar de baja.'); return; }
-  await refreshAdmin();
+  try{
+    const data = await api('marcarBaja', { dni, nota, reemplazo:'', adminToken });
+    if(!data.ok){ alert(data.error || 'No se pudo dar de baja.'); return; }
+    alert((data.nombre || 'La persona') + ' fue dada de baja.');
+    adminData = null;
+    peopleData = null;
+    await refreshAdmin();
+    if(adminView === 'people') {
+      await loadPeople();
+      renderPeople();
+    }
+  }catch(e){
+    alert(e.message || 'No se pudo dar de baja.');
+  }
 }
 
 async function loadPeople(){
@@ -727,16 +850,57 @@ function renderPeople(){
   const state = $('people-state').value;
   const parish = $('people-parish').value;
   const community = $('people-community').value;
+  const dniOrder = $('people-dni-order').value;
   const q = $('people-search').value.toLowerCase();
   if(state) list = list.filter(i=>i.estado === state || i.estadoCupo === state);
   if(parish) list = list.filter(i=>i.parroquia === parish);
   if(community) list = list.filter(i=>i.comunidad === community);
   if(q) list = list.filter(i=>i.nombre.toLowerCase().includes(q) || String(i.dni).includes(q));
+  if(dniOrder){
+    list = list.slice().sort((a,b) => {
+      const da = dateFromAR(a.vencimientoDni);
+      const db = dateFromAR(b.vencimientoDni);
+      const va = da ? da.getTime() : Number.MAX_SAFE_INTEGER;
+      const vb = db ? db.getTime() : Number.MAX_SAFE_INTEGER;
+      return dniOrder === 'dni_vence_asc' ? va - vb : vb - va;
+    });
+  }
   $('people-body').innerHTML = list.length ? list.map(i => {
     const wa = i.whatsapp ? '<a class="btn secondary small" target="_blank" href="https://wa.me/'+i.whatsapp+'?text='+encodeURIComponent('Hola '+(i.nombre||'').split(' ')[0]+', te escribimos por '+EVENTO+'.')+'">WA</a>' : '';
     const baja = canEdit() && i.estadoCupo !== 'baja' ? '<button class="btn danger small" onclick="markLow(\''+String(i.dni).replace(/\D/g,'')+'\')">Baja</button>' : '';
-    return '<tr><td>'+i.orden+'</td><td><b>'+i.nombre+'</b></td><td>'+i.dni+'</td><td>'+i.parroquia+'</td><td>'+i.comunidad+'</td><td>'+i.estadoCupo+'</td><td>'+(STATE_LABELS[i.estado] || i.estado)+'</td><td>'+money(i.resumen.totalPagado)+'</td><td><div class="actions">'+wa+baja+'</div></td></tr>';
-  }).join('') : '<tr><td colspan="9" class="empty">Sin resultados</td></tr>';
+    return '<tr><td>'+i.orden+'</td><td><b>'+i.nombre+'</b></td><td>'+i.dni+'</td><td>'+(i.vencimientoDni || '-')+'</td><td>'+i.parroquia+'</td><td>'+i.comunidad+'</td><td>'+i.estadoCupo+'</td><td>'+(STATE_LABELS[i.estado] || i.estado)+'</td><td>'+money(i.resumen.totalPagado)+'</td><td><div class="actions">'+wa+baja+'</div></td></tr>';
+  }).join('') : '<tr><td colspan="10" class="empty">Sin resultados</td></tr>';
+}
+
+function dateFromAR(value){
+  const p = (value || '').split('/').map(Number);
+  if(p.length !== 3 || !p[0] || !p[1] || !p[2]) return null;
+  return new Date(p[2], p[1] - 1, p[0]);
+}
+
+function renderProfileRequests(){
+  if(!adminData || !adminData.ok) return;
+  const reqs = adminData.cambiosPerfil || [];
+  if(!reqs.length){ $('profile-requests').innerHTML = '<div class="empty">No hay cambios de datos pendientes.</div>'; return; }
+  $('profile-requests').innerHTML = reqs.map(r => {
+    const cambios = Object.entries(r.cambios || {}).map(([k,v]) => '<div><b>'+labelCambio(k)+':</b> '+escapeHtml(String(v))+'</div>').join('');
+    const actions = canEdit()
+      ? `<button class="btn small" onclick="resolveProfileChange('${r.id}','aprobado')">Aprobar</button><button class="btn danger small" onclick="resolveProfileChange('${r.id}','rechazado')">Rechazar</button>`
+      : '';
+    return '<article class="pay-card card pending"><div class="pay-head"><div class="grow"><b>'+r.nombre+'</b><span>DNI '+r.dni+' - '+(r.fecha || '')+'</span></div></div><div class="panel">'+cambios+'<div class="actions" style="margin-top:10px">'+actions+'</div></div></article>';
+  }).join('');
+}
+
+function labelCambio(k){
+  return ({celular:'Celular',emergencia:'Telefono emergencia',parroquia:'Parroquia',comunidad:'Comunidad',restricciones:'Restricciones'})[k] || k;
+}
+function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+async function resolveProfileChange(id, decision){
+  const motivo = decision === 'rechazado' ? (prompt('Motivo opcional del rechazo:') || '') : '';
+  const data = await api('resolverCambioPerfil', { cambioId:id, decision, motivo, adminToken });
+  if(!data.ok){ alert(data.error || 'No se pudo resolver.'); return; }
+  await refreshAdmin();
+  setAdminView('profile');
 }
 
 function currentExportRows(){
