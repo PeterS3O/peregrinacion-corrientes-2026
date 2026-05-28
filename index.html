@@ -63,6 +63,8 @@ button,input,select{font:inherit}
 .pill.pending{background:var(--amber-soft);color:var(--amber)}
 .pill.bad{background:var(--red-soft);color:var(--red)}
 .pill.info{background:var(--blue-soft);color:var(--blue)}
+.name-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.name-tags .pill{font-size:.66rem;padding:2px 7px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
 .metric{padding:14px;text-align:center}
 .metric b{display:block;font-size:1.05rem}.metric span{display:block;color:var(--muted);font-size:.72rem;font-weight:700}
@@ -124,6 +126,11 @@ table{width:100%;border-collapse:collapse;background:white;border:1px solid var(
 th{background:var(--green);color:white;text-align:left;font-size:.74rem;padding:9px}
 td{border-bottom:1px solid var(--line);padding:8px 9px;font-size:.8rem;vertical-align:middle}
 tr:last-child td{border-bottom:0}
+.dni-expiry{border-radius:8px;padding:7px 8px;border:1px solid transparent}
+.dni-expiry b{display:block}
+.dni-expiry.alert{background:var(--red-soft);border-color:#f1b9b9;color:var(--red)}
+.dni-expiry.alert b{color:var(--red)}
+.dni-expiry.ok{background:var(--green-soft);border-color:#bcdccb;color:var(--green)}
 .filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
 .filters select,.filters input{border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;background:white;min-width:150px}
 .empty{color:var(--muted);text-align:center;padding:28px 12px}
@@ -149,7 +156,7 @@ tr:last-child td{border-bottom:0}
 <div id="global-loader" class="global-loader" aria-live="polite" aria-hidden="true">
   <div class="global-loader-card">
     <div class="mini-spinner"></div>
-    <span id="global-loader-text">Procesando...</span>
+    <span id="global-loader-text">Evangelizando...</span>
   </div>
 </div>
 <main id="page-home" class="page center active">
@@ -434,7 +441,7 @@ function showGlobalLoading(text){
   busyCount++;
   const el = $('global-loader');
   const label = $('global-loader-text');
-  if(label) label.textContent = text || 'Procesando...';
+  if(label) label.textContent = text || 'Evangelizando...';
   if(el){ el.classList.add('active'); el.setAttribute('aria-hidden','false'); }
 }
 function hideGlobalLoading(){
@@ -471,7 +478,7 @@ async function api(action, params){
   if(API.includes('TU_ID_DE_SCRIPT')){
     throw new Error('API_SIN_CONFIGURAR');
   }
-  showGlobalLoading('Procesando...');
+  showGlobalLoading('Evangelizando...');
   try{
     const res = await fetch(buildUrl(action, params));
     return await res.json();
@@ -805,9 +812,11 @@ async function refreshAdmin(){
 function groupedPayments(){
   const map = {};
   (adminData.pagos || []).forEach(p => {
-    if(!map[p.dni]) map[p.dni] = { dni:p.dni, nombre:p.nombre, whatsapp:p.whatsapp || '', estadoCupo:p.estadoCupo || '', pagos:[] };
+    if(!map[p.dni]) map[p.dni] = { dni:p.dni, nombre:p.nombre, whatsapp:p.whatsapp || '', estadoCupo:p.estadoCupo || '', vencimientoDni:p.vencimientoDni || '', fechaNacimiento:p.fechaNacimiento || '', pagos:[] };
     if(p.whatsapp && !map[p.dni].whatsapp) map[p.dni].whatsapp = p.whatsapp;
     if(p.estadoCupo) map[p.dni].estadoCupo = p.estadoCupo;
+    if(p.vencimientoDni) map[p.dni].vencimientoDni = p.vencimientoDni;
+    if(p.fechaNacimiento) map[p.dni].fechaNacimiento = p.fechaNacimiento;
     map[p.dni].pagos.push(p);
   });
   return Object.values(map);
@@ -870,7 +879,7 @@ function renderPaymentCard(person){
   }).join('');
   const details = person.pagos.map(p=>renderComp(p, person)).join('');
   const bajaInfo = person.estadoCupo === 'baja' ? '<span class="pill bad">Dado de baja - devolver '+money(confirmedTotal(person))+'</span>' : '';
-  return '<article class="pay-card card '+cls+'"><div class="pay-head" onclick="toggleDetails(\'det-'+person.dni+'\')"><div class="avatar">'+initials(person.nombre)+'</div><div class="grow"><b>'+person.nombre+'</b><span>DNI '+person.dni+' - '+person.pagos.length+' comprobante(s)</span>'+bajaInfo+'</div><div><b>'+money(confirmedTotal(person))+'</b><span>de '+money(TOTAL)+'</span></div></div><div class="chips">'+chips+'</div><div id="det-'+person.dni+'" class="details">'+details+'</div><div class="row" style="padding:10px 14px"><span class="meta">'+(person.whatsapp ? 'WA '+person.whatsapp : 'Sin WhatsApp')+'</span><div class="actions">'+(canEdit() && person.estadoCupo !== 'baja'?'<button class="btn secondary small" onclick="markLow(\''+person.dni+'\')">Dar de baja</button>':'')+'</div></div></article>';
+  return '<article class="pay-card card '+cls+'"><div class="pay-head" onclick="toggleDetails(\'det-'+person.dni+'\')"><div class="avatar">'+initials(person.nombre)+'</div><div class="grow"><b>'+person.nombre+'</b>'+personAlertTags(person)+'<span>DNI '+person.dni+' - '+person.pagos.length+' comprobante(s)</span>'+bajaInfo+'</div><div><b>'+money(confirmedTotal(person))+'</b><span>de '+money(TOTAL)+'</span></div></div><div class="chips">'+chips+'</div><div id="det-'+person.dni+'" class="details">'+details+'</div><div class="row" style="padding:10px 14px"><span class="meta">'+(person.whatsapp ? 'WA '+person.whatsapp : 'Sin WhatsApp')+'</span><div class="actions">'+(canEdit() && person.estadoCupo !== 'baja'?'<button class="btn secondary small" onclick="markLow(\''+person.dni+'\')">Dar de baja</button>':'')+'</div></div></article>';
 }
 function renderComp(p, person){
   let actions = '';
@@ -963,7 +972,7 @@ function renderPeople(){
   $('people-body').innerHTML = list.length ? list.map(i => {
     const wa = i.whatsapp ? '<a class="btn secondary small" target="_blank" href="https://wa.me/'+i.whatsapp+'?text='+encodeURIComponent('Hola '+(i.nombre||'').split(' ')[0]+', te escribimos por '+EVENTO+'.')+'">WA</a>' : '';
     const baja = canEdit() && i.estadoCupo !== 'baja' ? '<button class="btn danger small" onclick="markLow(\''+String(i.dni).replace(/\D/g,'')+'\')">Baja</button>' : '';
-    return '<tr><td>'+i.orden+'</td><td><b>'+i.nombre+'</b></td><td>'+i.dni+'</td><td>'+(i.vencimientoDni || '-')+'</td><td>'+i.parroquia+'</td><td>'+i.comunidad+'</td><td>'+i.estadoCupo+'</td><td>'+(STATE_LABELS[i.estado] || i.estado)+'</td><td>'+money(i.resumen.totalPagado)+'</td><td><div class="actions">'+wa+baja+'</div></td></tr>';
+    return '<tr><td>'+i.orden+'</td><td><b>'+i.nombre+'</b>'+personAlertTags(i)+'</td><td>'+i.dni+'</td><td>'+renderDniExpiry(i.vencimientoDni)+'</td><td>'+i.parroquia+'</td><td>'+i.comunidad+'</td><td>'+i.estadoCupo+'</td><td>'+(STATE_LABELS[i.estado] || i.estado)+'</td><td>'+money(i.resumen.totalPagado)+'</td><td><div class="actions">'+wa+baja+'</div></td></tr>';
   }).join('') : '<tr><td colspan="10" class="empty">Sin resultados</td></tr>';
 }
 
@@ -971,6 +980,42 @@ function dateFromAR(value){
   const p = (value || '').split('/').map(Number);
   if(p.length !== 3 || !p[0] || !p[1] || !p[2]) return null;
   return new Date(p[2], p[1] - 1, p[0]);
+}
+
+function renderDniExpiry(value){
+  const date = dateFromAR(value);
+  if(!date) return '<span class="meta">-</span>';
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const alarmLimit = new Date(2026, 10, 1);
+  const needsAlert = date < alarmLimit;
+  const label = date < today ? badge('Vencido','bad') : needsAlert ? badge('Alarma','bad') : badge('OK','ok');
+  return '<div class="dni-expiry '+(needsAlert ? 'alert' : 'ok')+'"><b>'+value+'</b><div style="margin-top:4px">'+label+'</div></div>';
+}
+
+function personAlertTags(person){
+  const tags = [];
+  if(isMinor(person.fechaNacimiento)) tags.push(badge('Menor de edad','info'));
+  if(isDniExpired(person.vencimientoDni)) tags.push(badge('DNI vencido','bad'));
+  return tags.length ? '<div class="name-tags">'+tags.join('')+'</div>' : '';
+}
+
+function isDniExpired(value){
+  const date = dateFromAR(value);
+  if(!date) return false;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  return date < today;
+}
+
+function isMinor(value){
+  const birth = dateFromAR(value);
+  if(!birth) return false;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const hadBirthday = today.getMonth() > birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate());
+  if(!hadBirthday) age--;
+  return age < 18;
 }
 
 function renderProfileRequests(){
