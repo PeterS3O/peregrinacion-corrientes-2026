@@ -228,8 +228,9 @@ tr:last-child td{border-bottom:0}
         </div>
       </section>
       <section class="card panel">
-        <div style="font-weight:800">Alias Mercado Pago</div>
+        <div style="font-weight:800">Datos Mercado Pago</div>
         <div style="font-size:1.1rem;color:var(--green);font-weight:800;letter-spacing:.03em" id="state-alias"></div>
+        <div id="state-transfer-detail" class="meta" style="margin-top:4px"></div>
         <p class="sub" style="margin:6px 0 0">Para acreditar cada cuota, subi el comprobante de transferencia o la foto del recibo si pagaste en efectivo. Los pagos en efectivo quedan pendientes hasta que el responsable entregue el dinero.</p>
       </section>
       <section id="state-alert" class="panel card" style="display:none;background:var(--amber-soft);color:var(--amber)"></section>
@@ -402,9 +403,9 @@ tr:last-child td{border-bottom:0}
 
 <script>
 const API = 'https://script.google.com/macros/s/AKfycbxp9IG2bDtgNmJNhtUrR1yjdhDXoP9VjMIuzRzUnKgUNlxjWCXddJJIcEbh7m8SL-iDlA/exec';
-const ALIAS = 'alias.mercadopago';
-const CVU = 'TU_CVU';
-const TITULAR = 'TU_TITULAR';
+const ALIAS = 'peregrinacioncaacupe';
+const CVU = '0000003100050591362610';
+const TITULAR = 'Cecilia Maria Victoria Colautti';
 const CLD_CLOUD = 'dimunrwrl';
 const CLD_PRESET = 'peregrinacion_cnc_ctes_2026';
 const EVENTO = 'Peregrinacion de Jovenes - CNC Corrientes 2026';
@@ -528,6 +529,7 @@ function renderState(){
   $('state-name').textContent = d.nombre;
   $('state-info').textContent = 'DNI ...' + String(d.dni).slice(-4) + ' - ' + (d.parroquia || '') + (d.comunidad ? ' - ' + d.comunidad : '');
   $('state-alias').textContent = ALIAS;
+  $('state-transfer-detail').innerHTML = 'CVU: ' + CVU + '<br>Titular: ' + TITULAR;
   $('state-paid').textContent = money(r.totalPagado);
   $('state-review').textContent = money(r.totalPendConf);
   $('state-missing').textContent = money(faltante);
