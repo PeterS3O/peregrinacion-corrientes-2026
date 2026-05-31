@@ -528,7 +528,7 @@ function renderState(){
   $('state-avatar').textContent = initials(d.nombre);
   $('state-name').textContent = d.nombre;
   $('state-info').textContent = 'DNI ...' + String(d.dni).slice(-4) + ' - ' + (d.parroquia || '') + (d.comunidad ? ' - ' + d.comunidad : '');
-  $('state-alias').textContent = ALIAS;
+  $('state-alias').textContent = 'Alias: ' + ALIAS;
   $('state-transfer-detail').innerHTML = 'CVU: ' + CVU + '<br>Titular: ' + TITULAR;
   $('state-paid').textContent = money(r.totalPagado);
   $('state-review').textContent = money(r.totalPendConf);
@@ -640,7 +640,7 @@ async function submitProfileChange(){
 function showPayment(preselectKey, mode){
   paymentMode = mode === 'efectivo' ? 'efectivo' : 'transferencia';
   showPage('page-payment');
-  $('transfer-alias').textContent = ALIAS;
+  $('transfer-alias').textContent = 'Alias: ' + ALIAS;
   $('transfer-detail').innerHTML = 'CVU: ' + CVU + '<br>Titular: ' + TITULAR;
   $('payment-msg').className = 'message';
   $('payment-msg').textContent = '';
